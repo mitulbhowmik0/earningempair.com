@@ -3,152 +3,228 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Earning Empair</title>
+<title>Earning Empire</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
 :root{
-  --p:#667eea;--s:#764ba2;--bg:linear-gradient(135deg,#667eea,#764ba2);
-  --card:#fff;--txt:#111827;--mut:#6b7280;
+  --bg1:#667eea;--bg2:#764ba2;
+  --card:#fff;--text:#111;--muted:#666;
 }
-*{box-sizing:border-box;font-family:system-ui;margin:0;padding:0}
-body{background:var(--bg);min-height:100vh;padding-bottom:80px;color:var(--txt)}
-.header{padding:16px;color:#fff;font-weight:800;text-align:center}
-.page{display:none;padding:16px}
-.page.active{display:block}
-.card{background:var(--card);border-radius:20px;padding:16px;margin-bottom:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
-.coin{font-size:36px;font-weight:900;background:linear-gradient(135deg,#f59e0b,#d97706);
--webkit-background-clip:text;-webkit-text-fill-color:transparent}
-input{width:100%;padding:12px;border-radius:12px;border:2px solid #e5e7eb;margin:6px 0}
-.btn{width:100%;padding:14px;border-radius:14px;border:none;background:var(--bg);color:#fff;font-weight:800;cursor:pointer}
-.btn:active{transform:scale(.96)}
-.nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:#fff;box-shadow:0 -4px 20px rgba(0,0,0,.2)}
-.nav button{flex:1;padding:10px;border:none;background:none;font-size:12px;color:#6b7280}
-.nav button.active{color:var(--p);font-weight:800}
+*{box-sizing:border-box;margin:0;padding:0;font-family:system-ui}
+body{
+  background:linear-gradient(135deg,var(--bg1),var(--bg2));
+  min-height:100vh;padding-bottom:80px;
+}
+.app{max-width:420px;margin:auto;padding:12px}
+.card{
+  background:var(--card);
+  border-radius:18px;
+  padding:14px;margin-bottom:12px;
+  box-shadow:0 8px 25px rgba(0,0,0,.15);
+}
+h2{font-size:18px}
+.muted{color:var(--muted);font-size:13px}
+.balance{font-size:34px;font-weight:700;text-align:center}
+.btn{
+  width:100%;padding:12px;border:none;
+  border-radius:999px;
+  background:linear-gradient(135deg,#6c63ff,#4facfe);
+  color:#fff;font-size:15px;
+}
+.btn:active{transform:scale(.97)}
+.row{display:flex;gap:10px}
+.row .btn{flex:1}
 .hidden{display:none}
+
+.nav{
+  position:fixed;left:0;right:0;bottom:0;
+  background:#fff;display:flex;border-top:1px solid #ddd
+}
+.nav button{
+  flex:1;border:none;background:none;
+  padding:10px;font-size:12px;
+}
 </style>
 </head>
 
 <body>
-
-<div class="header">Earning Empair</div>
+<div class="app">
 
 <!-- AUTH -->
-<div id="auth" class="page active">
-  <div class="card">
-    <h3>Login / Register</h3>
-    <input id="email" placeholder="Email">
-    <input id="password" type="password" placeholder="Password">
-    <button class="btn" onclick="login()">Login</button>
-    <button class="btn" style="margin-top:8px" onclick="register()">Register</button>
-  </div>
+<div id="auth" class="card">
+  <h2>Login / Register</h2>
+  <input id="email" placeholder="Email" style="width:100%;padding:10px;margin:6px 0">
+  <input id="password" type="password" placeholder="Password" style="width:100%;padding:10px;margin:6px 0">
+  <button class="btn" onclick="login()">Login</button>
+  <button class="btn" style="margin-top:6px" onclick="register()">Register</button>
 </div>
 
 <!-- HOME -->
-<div id="home" class="page">
+<div id="home" class="page hidden">
   <div class="card">
-    <div>Total Coins</div>
-    <div class="coin" id="coinBox">0</div>
-  </div>
-
-  <div class="card">
-    <button class="btn" onclick="dailySpin()">🎡 Daily Spin</button>
-  </div>
-
-  <div class="card">
-    <button class="btn" onclick="watchAd()">📺 Watch Ad & Earn</button>
-  </div>
-
-  <div class="card">
-    <input id="redeemInput" placeholder="Redeem Code">
-    <button class="btn" onclick="redeem()">Redeem</button>
+    <h2>Home</h2>
+    <div class="balance"><span id="coinBox">0</span> Coins</div>
+    <button class="btn" onclick="earn()">🎮 Earn Coins</button>
   </div>
 </div>
 
 <!-- WALLET -->
-<div id="wallet" class="page">
-  <div class="card">Coins: <b id="walletCoins">0</b></div>
-</div>
-
-<!-- ADMIN -->
-<div id="admin" class="page hidden">
+<div id="wallet" class="page hidden">
   <div class="card">
-    <h3>Admin Panel</h3>
-    <input id="adminCode" placeholder="Set Redeem Code">
-    <button class="btn" onclick="setRedeem()">Save Code</button>
+    <h2>Wallet</h2>
+    <p>Total Balance: <b id="walletCoins">0</b></p>
   </div>
 </div>
 
-<div class="nav">
-  <button class="active" onclick="openPage('home',this)">Home</button>
-  <button onclick="openPage('wallet',this)">Wallet</button>
-  <button onclick="openPage('admin',this)">Admin</button>
+<!-- PROFILE -->
+<div id="profile" class="page hidden">
+  <div class="card">
+    <h2>Profile</h2>
+    <p>Email: <b id="pEmail"></b></p>
+    <p>User ID: <b id="pId"></b></p>
+    <p>Referral Code: <b id="pRef"></b></p>
+    <button class="btn" onclick="logout()">Logout</button>
+  </div>
 </div>
 
-<!-- JS -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<!-- REFERRAL -->
+<div id="referral" class="page hidden">
+  <div class="card">
+    <h2>Referral</h2>
+    <p>Your Code: <b id="refCode"></b></p>
+    <p class="muted">Share & earn bonus</p>
+  </div>
+</div>
+
+<!-- LEADERBOARD -->
+<div id="leader" class="page hidden">
+  <div class="card">
+    <h2>Leaderboard</h2>
+    <div id="leaderList"></div>
+  </div>
+</div>
+
+</div>
+
+<div class="nav">
+  <button onclick="openPage('home')">🏠 Home</button>
+  <button onclick="openPage('wallet')">👛 Wallet</button>
+  <button onclick="openPage('leader')">🏆 Leader</button>
+  <button onclick="openPage('profile')">👤 Profile</button>
+  <button onclick="openPage('referral')">👥 Refer</button>
+</div>
+
 <script>
-/* ===== CONFIG (CHANGE THIS ONLY) ===== */
+/* ===== SUPABASE CONFIG ===== */
 const SUPABASE_URL = "https://qytgvvitwqrfdjddfmon.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF5dGd2dml0d3FyZmRqZGRmbW9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyMzQ4MjUsImV4cCI6MjA4MjgxMDgyNX0.GXxif1AUW8si6CmZIUYhyqouETZgfEsJ1y0HwYij9dQ";
-const ADMIN_EMAIL = "mitulbhowmik00@gmail.com";
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const supabase = supabasejs.createClient(SUPABASE_URL, SUPABASE_KEY);
+let currentUser=null;
+let coins=0;
 
-/* ===== STATE ===== */
-let user = null;
-let coins = 0;
-
-/* ===== FUNCTIONS ===== */
-function openPage(id,btn){
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-}
-
+/* ===== AUTH ===== */
 async function register(){
-  alert("Register clicked");
-  const email = emailEl.value;
-  const password = passEl.value;
-  const { error } = await supabase.auth.signUp({ email, password });
+  const email=emailEl.value, pass=passEl.value;
+  const {data,error}=await supabase.auth.signUp({email,password:pass});
   if(error) return alert(error.message);
   alert("Registered, now login");
 }
 
 async function login(){
-  alert("Login clicked");
-  const email = emailEl.value;
-  const password = passEl.value;
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  const email=emailEl.value, pass=passEl.value;
+  const {data,error}=await supabase.auth.signInWithPassword({email,password:pass});
   if(error) return alert(error.message);
-  user = data.user;
-  document.getElementById("auth").classList.remove("active");
-  openPage('home',document.querySelector('.nav button'));
-  if(user.email === ADMIN_EMAIL){
-    document.getElementById("admin").classList.remove("hidden");
+  currentUser=data.user;
+  await initUser();
+}
+
+async function logout(){
+  await supabase.auth.signOut();
+  location.reload();
+}
+
+/* ===== INIT USER ===== */
+async function initUser(){
+  authBox.classList.add("hidden");
+  showAllPages();
+  pEmail.innerText=currentUser.email;
+  pId.innerText=currentUser.id;
+
+  let {data}=await supabase.from("users").select("*").eq("id",currentUser.id).single();
+
+  if(!data){
+    const ref=Math.random().toString(36).substring(2,8);
+    await supabase.from("users").insert({
+      id:currentUser.id,
+      email:currentUser.email,
+      referral_code:ref
+    });
+    coins=0;
+    pRef.innerText=ref;
+  }else{
+    coins=data.coins;
+    pRef.innerText=data.referral_code;
   }
+  updateCoins();
+  loadLeaderboard();
 }
 
-function dailySpin(){
-  alert("Spin working ✅");
+/* ===== COINS ===== */
+function updateCoins(){
+  coinBox.innerText=coins;
+  walletCoins.innerText=coins;
 }
 
-function watchAd(){
-  alert("Watch Ad working ✅");
+/* ===== EARN ===== */
+async function earn(){
+  const reward=Math.floor(Math.random()*10)+5;
+  coins+=reward;
+  await supabase.from("users")
+    .update({coins})
+    .eq("id",currentUser.id);
+  updateCoins();
+  alert("You earned "+reward+" coins");
 }
 
-function redeem(){
-  alert("Redeem working ✅");
+/* ===== LEADERBOARD (REAL) ===== */
+async function loadLeaderboard(){
+  const {data}=await supabase
+    .from("users")
+    .select("email,coins")
+    .order("coins",{ascending:false})
+    .limit(10);
+
+  leaderList.innerHTML="";
+  data.forEach((u,i)=>{
+    leaderList.innerHTML+=`<p>${i+1}. ${u.email} - ${u.coins}</p>`;
+  });
 }
 
-function setRedeem(){
-  alert("Admin redeem set ✅");
+/* ===== NAV ===== */
+function openPage(id){
+  document.querySelectorAll(".page").forEach(p=>p.classList.add("hidden"));
+  document.getElementById(id).classList.remove("hidden");
+}
+function showAllPages(){
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("hidden"));
 }
 
-const emailEl = document.getElementById("email");
-const passEl = document.getElementById("password");
+/* ===== ELEMENTS ===== */
+const emailEl=document.getElementById("email");
+const passEl=document.getElementById("password");
+const authBox=document.getElementById("auth");
+
+/* ===== AUTO LOGIN ===== */
+(async()=>{
+  const {data}=await supabase.auth.getSession();
+  if(data.session){
+    currentUser=data.session.user;
+    initUser();
+  }
+})();
 </script>
-
 </body>
 </html>
-
