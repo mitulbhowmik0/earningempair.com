@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Earning Empire</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -53,7 +53,7 @@ h2{font-size:18px}
 <div class="app">
 
 <!-- AUTH -->
-<div id="auth" class="card">
+<div id="authBox" class="card">
   <h2>Login / Register</h2>
   <input id="email" placeholder="Email" style="width:100%;padding:10px;margin:6px 0">
   <input id="password" type="password" placeholder="Password" style="width:100%;padding:10px;margin:6px 0">
@@ -94,7 +94,6 @@ h2{font-size:18px}
   <div class="card">
     <h2>Referral</h2>
     <p>Your Code: <b id="refCode"></b></p>
-    <p class="muted">Share & earn bonus</p>
   </div>
 </div>
 
@@ -119,26 +118,29 @@ h2{font-size:18px}
 <script>
 /* ===== SUPABASE CONFIG ===== */
 const SUPABASE_URL = "https://qytgvvitwqrfdjddfmon.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF5dGd2dml0d3FyZmRqZGRmbW9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyMzQ4MjUsImV4cCI6MjA4MjgxMDgyNX0.GXxif1AUW8si6CmZIUYhyqouETZgfEsJ1y0HwYij9dQ";
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF5dGd2dml0d3FyZmRqZGRmbW9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyMzQ4MjUsImV4cCI6MjA4MjgxMDgyNX0.GXxif1AUW8si6CmZIUYhyqouETZgfEsJ1y0HwYij9dQ";
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-let currentUser=null;
-let coins=0;
+/* ===== STATE ===== */
+let currentUser = null;
+let coins = 0;
 
 /* ===== AUTH ===== */
 async function register(){
-  const email=emailEl.value, pass=passEl.value;
-  const {data,error}=await supabase.auth.signUp({email,password:pass});
+  const email = emailEl.value;
+  const password = passEl.value;
+  const { error } = await supabase.auth.signUp({ email, password });
   if(error) return alert(error.message);
-  alert("Registered, now login");
+  alert("Registered. Now login.");
 }
 
 async function login(){
-  const email=emailEl.value, pass=passEl.value;
-  const {data,error}=await supabase.auth.signInWithPassword({email,password:pass});
+  const email = emailEl.value;
+  const password = passEl.value;
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if(error) return alert(error.message);
-  currentUser=data.user;
-  await initUser();
+  currentUser = data.user;
+  initUser();
 }
 
 async function logout(){
@@ -149,57 +151,59 @@ async function logout(){
 /* ===== INIT USER ===== */
 async function initUser(){
   authBox.classList.add("hidden");
-  showAllPages();
-  pEmail.innerText=currentUser.email;
-  pId.innerText=currentUser.id;
+  openPage("home");
+  pEmail.innerText = currentUser.email;
+  pId.innerText = currentUser.id;
 
-  let {data}=await supabase.from("users").select("*").eq("id",currentUser.id).single();
+  let { data } = await supabase.from("users").select("*").eq("id", currentUser.id).single();
 
   if(!data){
-    const ref=Math.random().toString(36).substring(2,8);
+    const ref = Math.random().toString(36).substring(2,8);
     await supabase.from("users").insert({
-      id:currentUser.id,
-      email:currentUser.email,
-      referral_code:ref
+      id: currentUser.id,
+      email: currentUser.email,
+      coins: 0,
+      referral_code: ref
     });
-    coins=0;
-    pRef.innerText=ref;
+    coins = 0;
+    pRef.innerText = ref;
+    refCode.innerText = ref;
   }else{
-    coins=data.coins;
-    pRef.innerText=data.referral_code;
+    coins = data.coins;
+    pRef.innerText = data.referral_code;
+    refCode.innerText = data.referral_code;
   }
+
   updateCoins();
   loadLeaderboard();
 }
 
 /* ===== COINS ===== */
 function updateCoins(){
-  coinBox.innerText=coins;
-  walletCoins.innerText=coins;
+  coinBox.innerText = coins;
+  walletCoins.innerText = coins;
 }
 
 /* ===== EARN ===== */
 async function earn(){
-  const reward=Math.floor(Math.random()*10)+5;
-  coins+=reward;
-  await supabase.from("users")
-    .update({coins})
-    .eq("id",currentUser.id);
+  const reward = Math.floor(Math.random()*10)+5;
+  coins += reward;
+  await supabase.from("users").update({ coins }).eq("id", currentUser.id);
   updateCoins();
-  alert("You earned "+reward+" coins");
+  alert("You earned " + reward + " coins");
 }
 
 /* ===== LEADERBOARD (REAL) ===== */
 async function loadLeaderboard(){
-  const {data}=await supabase
+  const { data } = await supabase
     .from("users")
-    .select("email,coins")
-    .order("coins",{ascending:false})
+    .select("email, coins")
+    .order("coins", { ascending:false })
     .limit(10);
 
-  leaderList.innerHTML="";
+  leaderList.innerHTML = "";
   data.forEach((u,i)=>{
-    leaderList.innerHTML+=`<p>${i+1}. ${u.email} - ${u.coins}</p>`;
+    leaderList.innerHTML += `<p>${i+1}. ${u.email} - ${u.coins}</p>`;
   });
 }
 
@@ -208,20 +212,17 @@ function openPage(id){
   document.querySelectorAll(".page").forEach(p=>p.classList.add("hidden"));
   document.getElementById(id).classList.remove("hidden");
 }
-function showAllPages(){
-  document.querySelectorAll(".page").forEach(p=>p.classList.remove("hidden"));
-}
 
 /* ===== ELEMENTS ===== */
-const emailEl=document.getElementById("email");
-const passEl=document.getElementById("password");
-const authBox=document.getElementById("auth");
+const emailEl = document.getElementById("email");
+const passEl = document.getElementById("password");
+const authBox = document.getElementById("authBox");
 
 /* ===== AUTO LOGIN ===== */
 (async()=>{
-  const {data}=await supabase.auth.getSession();
+  const { data } = await supabase.auth.getSession();
   if(data.session){
-    currentUser=data.session.user;
+    currentUser = data.session.user;
     initUser();
   }
 })();
