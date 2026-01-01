@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Earning Empair</title>
+
+<!-- ================= THEME ================= -->
+<style>
+:root{
+  --p:#667eea; --s:#764ba2; --a:#f59e0b; --bg:linear-gradient(135deg,#667eea,#764ba2);
+  --card:#fff; --txt:#111827; --mut:#6b7280;
+}
+*{box-sizing:border-box;font-family:system-ui;margin:0;padding:0}
+body{background:var(--bg);min-height:100vh;padding-bottom:80px;color:var(--txt)}
+.header{padding:16px;color:#fff;font-weight:800;text-align:center}
+.page{display:none;padding:16px;animation:fade .2s ease}
+.page.active{display:block}
+.card{background:var(--card);border-radius:20px;padding:16px;margin-bottom:16px;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+h3{margin-bottom:8px}
+.coin{font-size:36px;font-weight:900;background:linear-gradient(135deg,#f59e0b,#d97706);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+input{width:100%;padding:12px;border-radius:12px;border:2px solid #e5e7eb;margin:6px 0}
+.btn{width:100%;padding:14px;border-radius:14px;border:2px solid transparent;background:var(--bg);color:#fff;font-weight:800;cursor:pointer;transition:.15s}
+.btn.out{background:#fff;color:var(--p);border-color:var(--p)}
+.btn:active{transform:scale(.96)}
+.row{display:flex;gap:10px}
+.row .btn{flex:1}
+.small{font-size:12px;color:var(--mut)}
+.nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:#fff;box-shadow:0 -4px 20px rgba(0,0,0,.2)}
+.nav button{flex:1;padding:10px;border:none;background:none;font-size:12px;color:#6b7280}
+.nav button.active{color:var(--p);font-weight:800}
+.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#eef2ff;color:#4338ca;font-size:12px}
+.hidden{display:none}
+@keyframes fade{from{opacity:.6;transform:translateY(4px)}to{opacity:1;transform:none}}
+</style>
+</head>
+
+<body>
+<div class="header">Earning Empair</div>
+
+<!-- ============== AUTH ============== -->
+<div id="auth" class="page active">
+  <div class="card">
+    <h3>Login / Register</h3>
+    <input id="email" placeholder="Email"/>
+    <input id="password" type="password" placeholder="Password"/>
+    <div class="row">
+      <button class="btn" onclick="login()">Login</button>
+      <button class="btn out" onclick="register()">Register</button>
+    </div>
+    <p class="small">Email + Password (instant access)</p>
+  </div>
+</div>
+
+<!-- ============== HOME ============== -->
+<div id="home" class="page">
+  <div class="card">
+    <div>Total Coins</div>
+    <div class="coin" id="coinBox">0</div>
+  </div>
+
+  <div class="card">
+    <h3>Daily Spin <span class="badge" id="spinBadge">0/70</span></h3>
+    <button class="btn" onclick="dailySpin()">🎡 Spin (Watch Ad)</button>
+    <p class="small">5–50 coins • 70/day</p>
+  </div>
+
+  <div class="card">
+    <h3>Watch Ads & Earn</h3>
+    <button class="btn" onclick="watchAd()">📺 Watch Ad</button>
+    <p class="small">Unlimited • 5–40 coins each</p>
+  </div>
+
+  <div class="card">
+    <h3>Redeem Code</h3>
+    <input id="redeemInput" placeholder="8-digit code"/>
+    <button class="btn" onclick="redeem()">Redeem</button>
+    <p class="small">First 30 users • 100 coins • once/day</p>
+  </div>
+</div>
+
+<!-- ============== WALLET ============== -->
+<div id="wallet" class="page">
+  <div class="card"><h3>Wallet</h3><p>Coins: <b id="walletCoins">0</b></p></div>
+</div>
+
+<!-- ============== PROFILE ============== -->
+<div id="profile" class="page">
+  <div class="card">
+    <p>Email: <b id="pEmail">-</b></p>
+    <p>User ID: <b id="pId">-</b></p>
+    <p>Joined: <b id="pJoin">-</b></p>
+  </div>
+</div>
+
+<!-- ============== LEADERBOARD ============== -->
+<div id="leader" class="page">
+  <div class="card"><h3>Leaderboard</h3><div id="leaderList"></div></div>
+</div>
+
+<!-- ============== ADMIN ============== -->
+<div id="admin" class="page hidden">
+  <div class="card">
+    <h3>Admin Panel</h3>
+    <p class="small">Full control</p>
+    <input id="setCode" placeholder="Set new 8-digit redeem code"/>
+    <button class="btn" onclick="setRedeem()">Save Code</button>
+    <hr style="margin:12px 0"/>
+    <input id="adMin" placeholder="Watch Ad min coin (5)"/>
+    <input id="adMax" placeholder="Watch Ad max coin (40)"/>
+    <button class="btn out" onclick="saveSettings()">Save Settings</button>
+  </div>
+</div>
+
+<!-- ============== NAV ============== -->
+<div class="nav">
+  <button class="active" onclick="openPage('home',this)">Home</button>
+  <button onclick="openPage('wallet',this)">Wallet</button>
+  <button onclick="openPage('profile',this)">Profile</button>
+  <button onclick="openPage('leader',this)">Top</button>
+  <button onclick="openPage('admin',this)">Admin</button>
+</div>
+
+<!-- ============== LOGIC ============== -->
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+/* ====== CONFIG (PUT YOUR KEYS) ====== */
+const SUPABASE_URL = "https://qytgvvitwqrfdjddfmon.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF5dGd2dml0d3FyZmRqZGRmbW9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyMzQ4MjUsImV4cCI6MjA4MjgxMDgyNX0.GXxif1AUW8si6CmZIUYhyqouETZgfEsJ1y0HwYij9dQ";
+const ADMIN_EMAIL = "mitulbhowmik00@gmail.com";
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ====== STATE ====== */
+let user=null, coins=0, spinCount=0, spinDate=null;
+let adMin=5, adMax=40;
+
+/* ====== AUTH ====== */
+async function register(){
+  const email = emailEl.value, password = passEl.value;
+  const { error } = await supabase.auth.signUp({ email, password });
+  if(error) return alert(error.message);
+  await login();
+}
+async function login(){
+  const email = emailEl.value, password = passEl.value;
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if(error) return alert(error.message);
+  user = data.user; await initUser();
+}
+const emailEl=document.getElementById('email'), passEl=document.getElementById('password');
+
+/* ====== INIT ====== */
+async function initUser(){
+  document.getElementById('auth').classList.remove('active');
+  openPage('home', document.querySelector('.nav button'));
+  document.getElementById('pEmail').textContent = user.email;
+  document.getElementById('pId').textContent = user.id;
+
+  // ensure profile row
+  const { data } = await supabase.from('users').select('*').eq('id',user.id).single();
+  if(!data){
+    await supabase.from('users').insert({ id:user.id, email:user.email });
+    coins=0; spinCount=0; spinDate=null;
+  }else{
+    coins=data.total_coins||0; spinCount=data.spin_count||0; spinDate=data.spin_date;
+    document.getElementById('pJoin').textContent = new Date(data.created_at).toLocaleDateString();
+  }
+  updateUI();
+  loadLeaderboard();
+  // admin gate
+  if(user.email===ADMIN_EMAIL){ document.getElementById('admin').classList.remove('hidden'); }
+}
+
+/* ====== UI ====== */
+function updateUI(){
+  coinBox.textContent=coins; walletCoins.textContent=coins;
+  spinBadge.textContent = `${spinCount}/70`;
+}
+window.openPage=(id,btn)=>{
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+/* ====== ADS HOOKS (PUT MONETAG HERE) ====== */
+function showAd(callback){
+  // TODO: place Monetag ad code; call callback() AFTER ad completed
+  setTimeout(callback, 800); // demo hook
+}
+
+/* ====== DAILY SPIN ====== */
+window.dailySpin=async()=>{
+  const today = new Date().toISOString().slice(0,10);
+  if(spinDate!==today){ spinCount=0; spinDate=today; }
+  if(spinCount>=70) return alert("Daily spin limit reached");
+
+  showAd(async()=>{
+    const reward = Math.floor(Math.random()*46)+5; // 5-50
+    coins+=reward; spinCount++;
+    await supabase.from('spin_logs').insert({ user_id:user.id, reward, spin_date:today });
+    await supabase.from('users').update({ total_coins:coins, spin_count:spinCount, spin_date:today }).eq('id',user.id);
+    updateUI(); alert(`You won ${reward} coins`);
+  });
+}
+
+/* ====== WATCH AD ====== */
+window.watchAd=()=>{
+  showAd(async()=>{
+    const reward = Math.floor(Math.random()*(adMax-adMin+1))+adMin; // 5-40
+    coins+=reward;
+    await supabase.from('ad_logs').insert({ user_id:user.id, reward });
+    await supabase.from('users').update({ total_coins:coins }).eq('id',user.id);
+    updateUI(); alert(`+${reward} coins`);
+  });
+}
+
+/* ====== REDEEM ====== */
+window.redeem=async()=>{
+  const code = redeemInput.value.trim();
+  if(code.length!==8) return alert("Invalid code");
+  const today = new Date().toISOString().slice(0,10);
+
+  const { data:log } = await supabase.from('redeem_logs')
+    .select('*').eq('user_id',user.id).eq('redeem_date',today).single();
+  if(log) return alert("Already redeemed today");
+
+  const { data:rc } = await supabase.from('redeem_codes')
+    .select('*').eq('code',code).eq('active',true).single();
+  if(!rc) return alert("Code not active");
+
+  const { count } = await supabase.from('redeem_logs')
+    .select('*',{count:'exact',head:true}).eq('code',code);
+  if(count>=rc.max_use) return alert("Limit reached");
+
+  await supabase.from('redeem_logs').insert({ user_id:user.id, code, redeem_date:today });
+  coins+=rc.reward;
+  await supabase.from('users').update({ total_coins:coins }).eq('id',user.id);
+  updateUI(); alert("+100 coins added");
+}
+
+/* ====== LEADERBOARD ====== */
+async function loadLeaderboard(){
+  const { data } = await supabase.from('users').select('email,total_coins').order('total_coins',{ascending:false}).limit(10);
+  leaderList.innerHTML = data.map((u,i)=>`<p>${i+1}. ${u.email} — ${u.total_coins}</p>`).join('');
+}
+
+/* ====== ADMIN ====== */
+window.setRedeem=async()=>{
+  const code=setCode.value.trim();
+  if(code.length!==8) return alert("8-digit only");
+  await supabase.from('redeem_codes').update({ active:false }).neq('code','');
+  await supabase.from('redeem_codes').insert({ code, reward:100, max_use:30, active:true });
+  alert("Redeem code updated");
+}
+window.saveSettings=()=>{
+  adMin = parseInt(adMinEl.value||5); adMax=parseInt(adMaxEl.value||40);
+  alert("Saved");
+}
+const adMinEl=document.getElementById('adMin'), adMaxEl=document.getElementById('adMax');
+
+/* ====== AUTO SESSION ====== */
+const { data:ses } = await supabase.auth.getSession();
+if(ses.session){ user=ses.session.user; await initUser(); }
+</script>
+</body>
+</html>
